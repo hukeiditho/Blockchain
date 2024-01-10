@@ -1,0 +1,66 @@
+import hashlib
+import time
+
+class Block:
+    def __init__(self, index, timestamp, data, previous_hash, nonce=0):
+        self.index = index
+        self.timestamp = timestamp
+        self.data = data
+        self.previous_hash = previous_hash
+        self.nonce = nonce
+        self.hash = self.calculate_hash()
+
+    def calculate_hash(self):
+        sha = hashlib.sha256()
+        sha.update(
+            str(self.index).encode('utf-8') +
+            str(self.timestamp).encode('utf-8') +
+            str(self.data).encode('utf-8') +
+            str(self.previous_hash).encode('utf-8') +
+            str(self.nonce).encode('utf-8')
+        )
+        return sha.hexdigest()
+
+class Blockchain:
+    def __init__(self):
+        self.chain = [self.create_genesis_block()]
+        self.difficulty = 4
+        self.mining_reward = 10
+        self.pending_transactions = []
+
+    def create_genesis_block(self):
+        return Block(0, time.time(), "Genesis Block", "0")
+
+    def get_latest_block(self):
+        return self.chain[-1]
+
+    def mine_pending_transactions(self, miner_address):
+        block = Block(len(self.chain), time.time(), self.pending_transactions, self.get_latest_block().hash)
+        block.mine_block(self.difficulty)
+        print("Block mined successfully!")
+        self.chain.append(block)
+        self.pending_transactions = [
+            {"from": None, "to": miner_address, "amount": self.mining_reward}
+        ]
+
+    def create_transaction(self, transaction):
+        self.pending_transactions.append(transaction)
+
+    def get_balance(self, address):
+        balance = 0
+        for block in self.chain:
+            for transaction in block.data:
+                if transaction["from"] == address:
+                    balance -= transaction["amount"]
+                if transaction["to"] == address:
+                    balance += transaction["amount"]
+        return balance
+
+# Example usage:
+if __name__ == "__main__":
+    my_blockchain = Blockchain()
+    my_blockchain.create_transaction({"from": "Alice", "to": "Bob", "amount": 20})
+    my_blockchain.create_transaction({"from": "Bob", "to": "Charlie", "amount": 10})
+    my_blockchain.mine_pending_transactions("Miner")
+
+    print(f"Miner's balance: {my_blockchain.get_balance('Miner')}")
