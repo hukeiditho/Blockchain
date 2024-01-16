@@ -1,0 +1,85 @@
+import hashlib
+import time
+import json
+from collections import OrderedDict
+
+class Block:
+    def __init__(self, index, timestamp, transactions, previous_hash, nonce=0):
+        self.index = index
+        self.timestamp = timestamp
+        self.transactions = transactions
+        self.previous_hash = previous_hash
+        self.nonce = nonce
+        self.hash = self.calculate_hash()
+
+    def calculate_hash(self):
+        block_string = json.dumps(self.__dict__, sort_keys=True)
+        return hashlib.sha256(block_string.encode()).hexdigest()
+
+class Transaction:
+    def __init__(self, sender, receiver, amount):
+        self.sender = sender
+        self.receiver = receiver
+        self.amount = amount
+
+class Blockchain:
+    def __init__(self):
+        self.chain = [self.create_genesis_block()]
+        self.pending_transactions = []
+        self.mining_reward = 10
+        self.difficulty = 4
+        self.delegations = {}
+
+    def create_genesis_block(self):
+        return Block(0, time.time(), [], "0")
+
+    def get_latest_block(self):
+        return self.chain[-1]
+
+    def mine_pending_transactions(self, miner_address):
+        mining_power = 1  # Default mining power
+        if miner_address in self.delegations:
+            mining_power = self.delegations[miner_address]
+
+        block = Block(len(self.chain), time.time(), self.pending_transactions, self.get_latest_block().hash)
+        block = self.proof_of_work(block, mining_power)
+        self.chain.append(block)
+        self.pending_transactions = [
+            Transaction(None, miner_address, self.mining_reward)
+        ]
+
+    def create_transaction(self, transaction):
+        self.pending_transactions.append(transaction)
+
+    def proof_of_work(self, block, mining_power):
+        while block.hash[:self.difficulty] != "0" * self.difficulty:
+            block.nonce += 1
+            block.hash = block.calculate_hash()
+            # Adjust difficulty based on mining power
+            block.hash = block.hash[:mining_power] + "0" * (self.difficulty - mining_power)
+        return block
+
+    def delegate_mining_power(self, delegator_address, delegate_address, mining_power):
+        if delegator_address not in self.delegations:
+            self.delegations[delegator_address] = 1  # Default mining power if not set
+        self.delegations[delegator_address] += mining_power
+        self.delegations[delegate_address] = mining_power
+
+# Example usage:
+if __name__ == "__main__":
+    my_blockchain = Blockchain()
+
+    # Creating transactions
+    my_blockchain.create_transaction(Transaction("Alice", "Bob", 20))
+    my_blockchain.create_transaction(Transaction("Bob", "Charlie", 10))
+
+    # Delegating mining power
+    my_blockchain.delegate_mining_power("Alice", "DelegateX", 2)
+
+    # Mining pending transactions
+    my_blockchain.mine_pending_transactions("DelegateX")
+
+    # Displaying the blockchain
+    for block in my_blockchain.chain:
+        print(f"Block #{block.index} - Hash: {block.hash}")
+        print("Transactions:", [t.__dict__ for t in block.transactions])
