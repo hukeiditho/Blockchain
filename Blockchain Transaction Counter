@@ -1,0 +1,42 @@
+from web3 import Web3
+
+def count_blockchain_transactions(node_url):
+    # Connect to the Ethereum blockchain node
+    web3 = Web3(Web3.HTTPProvider(node_url))
+
+    # Get the latest block number
+    latest_block_number = web3.eth.block_number
+
+    # Initialize a dictionary to store transaction counts for each address
+    transaction_counts = {}
+
+    # Iterate over blocks to count transactions
+    for block_number in range(latest_block_number):
+        block = web3.eth.get_block(block_number)
+        transactions = block['transactions']
+        for tx_hash in transactions:
+            tx = web3.eth.get_transaction(tx_hash)
+            sender = tx['from']
+            recipient = tx['to']
+
+            # Increment transaction count for sender
+            if sender in transaction_counts:
+                transaction_counts[sender] += 1
+            else:
+                transaction_counts[sender] = 1
+
+            # Increment transaction count for recipient
+            if recipient:
+                if recipient in transaction_counts:
+                    transaction_counts[recipient] += 1
+                else:
+                    transaction_counts[recipient] = 1
+
+    return transaction_counts
+
+if __name__ == "__main__":
+    node_url = 'https://mainnet.infura.io/v3/your_infura_project_id'  # Replace with your Ethereum node URL
+    transactions = count_blockchain_transactions(node_url)
+    print("Blockchain Transaction Counts:")
+    for address, count in transactions.items():
+        print(f"Address: {address}, Transaction Count: {count}")
